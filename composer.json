@@ -1,0 +1,28 @@
+{
+    "name": "cuytamvan/base-pattern-laravel",
+    "description": "Laravel pattern repository and fucking generator bitch",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "cuytamvan",
+            "email": "rizkiwahyudi540@gmail.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "files": [
+            "src/Helpers/functions.php"
+        ],
+        "psr-4": {
+            "Cuytamvan\\BasePattern\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Cuytamvan\\BasePattern\\BasePatternServiceProvider"
+            ]
+        }
+    }
+}
