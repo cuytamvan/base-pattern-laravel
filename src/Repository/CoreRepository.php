@@ -5,11 +5,13 @@ namespace Cuytamvan\BasePattern\Repository;
 use Illuminate\Database\Eloquent\Collection;
 
 use Exception;
+use Illuminate\Database\Eloquent\Builder;
 
 abstract class CoreRepository {
     protected $guard = null;
     protected $withActivities = true;
     protected $orderBy = null;
+    protected $payload = [];
 
     public function user() {
         return auth($this->guard)->user();
@@ -67,11 +69,76 @@ abstract class CoreRepository {
                 $data = $data->orderBy($field, $type);
             }
         }
+        $data = $this->searchable($data);
         return $data->get();
     }
 
     public function setOrderBy($orderBy) {
         $this->orderBy = $orderBy;
+    }
+
+    public function validateColumns(string $name) {
+        $columns = $this->model->columns();
+        $column = str_replace('!', '', $name);
+
+        return $columns[$column] ?? null;
+    }
+
+    public function setPayload($payload) {
+        $this->payload = $payload;
+    }
+
+    public function searchable(Builder $data): Builder {
+        $payload = $this->payload;
+
+        $search = [];
+        if (isset($payload['search'])) $search = extract_params($payload['search']);
+
+        $order = [];
+        if (isset($payload['order'])) $order = extract_params($payload['order']);
+
+        $searchLike = null;
+        if (isset($payload['search_like'])) $searchLike = extract_params_like($payload['search_like']);
+
+        if (count($search)) {
+            foreach ($search as $params) {
+                if ($column = $this->validateColumns($params['key'])) {
+                    $value = $params['value'];
+                    $importantCheck = explode('!', $params['key']);
+
+                    if ($value == 'not_null') $data = $data->whereNotNull($column);
+                    else if ($value == 'is_null') $data = $data->whereNull($column);
+                    else if (isset($importantCheck[1])) $data = $data->where($column, $value);
+                    else $data = $data->whereRaw($column.' = ? OR '.$column.' like ?', [$value, '%'.$value.'%']);
+                }
+            }
+        }
+
+        if (count($order)) {
+            $available = ['asc', 'desc'];
+            foreach($order as $r) {
+                $column = $r['key'];
+                if (in_array($column, $this->model->columns())) {
+                    $value = isset($r['value']) && in_array($r['value'], $available) ? $r['value'] : 'asc';
+                    $data->orderBy($column, $value);
+                }
+            }
+        }
+
+        if ($searchLike) {
+            $data = $data->where(function($q) use($searchLike) {
+                $index = 0;
+                foreach($searchLike->columns as $r) {
+                    if (in_array($r, $this->model->Columns())) {
+                        if ($index === 0) $q->where($r, 'LIKE', "%{$searchLike->value}%");
+                        else $q->orWhere($r, 'LIKE', "%{$searchLike->value}%");
+                        $index++;
+                    }
+                }
+            });
+        }
+
+        return $data;
     }
 
     public function paginate($limit = 10, $where = null, $with = [], $whereHas = null) {
@@ -87,6 +154,7 @@ abstract class CoreRepository {
             }
         }
 
+        $data = $this->searchable($data);
         return $data->paginate($limit);
     }
 
@@ -98,7 +166,7 @@ abstract class CoreRepository {
 
     public function delete($id) {
         if ($this->user() && $this->withActivities) {
-            $activity = activity('module')
+            $activity = activity($this->moduleName ?? '')
                 // ->setDescription('lorem ipsum dolor sit amet')
                 ->setProperties([ 'color' => '#EF4444', 'type' => 'delete' ])
                 ->setCauser($this->user());
