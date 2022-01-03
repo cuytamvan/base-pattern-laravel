@@ -16,7 +16,7 @@ abstract class CoreRepository {
     public function user() {
         return auth($this->guard)->user();
     }
-
+    
     public function uid() {
         return auth($this->guard)->id();
     }
