@@ -81,7 +81,7 @@ abstract class CoreRepository {
         $columns = $this->model->columns();
         $column = str_replace('!', '', $name);
 
-        return $columns[$column] ?? null;
+        return in_array($column, $columns) ? $column : null;
     }
 
     public function setPayload($payload) {
