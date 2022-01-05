@@ -14,4 +14,12 @@ class Activity extends Model {
         'causer_id',
         'properties',
     ];
+
+    public function causer() {
+        return $this->morphTo(__FUNCTION__, 'causer_model');
+    }
+
+    public function ref() {
+        return $this->morphTo(__FUNCTION__, 'ref_model');
+    }
 }
