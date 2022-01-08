@@ -16,16 +16,20 @@ abstract class CoreRepository {
     public function user() {
         return auth($this->guard)->user();
     }
-    
+
     public function uid() {
         return auth($this->guard)->id();
+    }
+
+    public function setGuard(string $guard) {
+        $this->guard = $guard;
     }
 
     public function store($id = null, $input = []) {
         try {
             $type = 'create';
-            if (!$id && in_array('created_by', $this->model->columns())) $input['created_by'] = $this->uid();
-            if ($id && in_array('updated_by', $this->model->columns())) $input['updated_by'] = $this->uid();
+            if (!$id && method_exists('columns', $this->model) && in_array('created_by', $this->model->columns())) $input['created_by'] = $this->uid();
+            if ($id && method_exists('columns', $this->model) && in_array('updated_by', $this->model->columns())) $input['updated_by'] = $this->uid();
 
             if ($id) {
                 $type = 'update';
@@ -78,7 +82,7 @@ abstract class CoreRepository {
     }
 
     public function validateColumns(string $name) {
-        $columns = $this->model->columns();
+        $columns = method_exists($this->model, 'columns') ? $this->model->columns() : [];
         $column = str_replace('!', '', $name);
 
         return in_array($column, $columns) ? $column : null;
@@ -118,7 +122,7 @@ abstract class CoreRepository {
             $available = ['asc', 'desc'];
             foreach($order as $r) {
                 $column = $r['key'];
-                if (in_array($column, $this->model->columns())) {
+                if (method_exists('columns', $this->model) && in_array($column, $this->model->columns())) {
                     $value = isset($r['value']) && in_array($r['value'], $available) ? $r['value'] : 'asc';
                     $data->orderBy($column, $value);
                 }
@@ -129,7 +133,7 @@ abstract class CoreRepository {
             $data = $data->where(function($q) use($searchLike) {
                 $index = 0;
                 foreach($searchLike->columns as $r) {
-                    if (in_array($r, $this->model->Columns())) {
+                    if (method_exists('columns', $this->model) && in_array($r, $this->model->columns())) {
                         if ($index === 0) $q->where($r, 'LIKE', "%{$searchLike->value}%");
                         else $q->orWhere($r, 'LIKE', "%{$searchLike->value}%");
                         $index++;
@@ -164,7 +168,7 @@ abstract class CoreRepository {
         return $data->find($id);
     }
 
-    public function delete($id) {
+    public function delete(...$id) {
         if ($this->user() && $this->withActivities) {
             $activity = activity($this->moduleName ?? '')
                 // ->setDescription('lorem ipsum dolor sit amet')
@@ -173,10 +177,13 @@ abstract class CoreRepository {
         }
 
         if (is_array($id)) {
-            if ($this->user() && $this->withActivities) $activity->save();
             $query = $this->model->whereIn('id', $id);
+            if ($this->user() && $this->withActivities) {
+                foreach($query->get() as $r) $activity->addSubject($r);
+                $activity->save();
+            }
             if (in_array('deleted_by', $this->model->columns())) $query->update(['deleted_by' => $this->uid()]);
-            return $this->model->whereIn('id', $id)->delete();
+            return $query->delete();
         } else {
             $data = $this->findById($id);
             if ($data) {
