@@ -15,6 +15,14 @@ class Activity extends Model {
         'properties',
     ];
 
+    public function columns() {
+        $arr = $this->fillable;
+        $arr[] = 'id';
+        $arr[] = 'created_at';
+        $arr[] = 'updated_at';
+        return $arr;
+    }
+
     public function causer() {
         return $this->morphTo(__FUNCTION__, 'causer_model');
     }
