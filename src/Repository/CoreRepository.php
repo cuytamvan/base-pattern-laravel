@@ -28,8 +28,8 @@ abstract class CoreRepository {
     public function store($id = null, $input = []) {
         try {
             $type = 'create';
-            if (!$id && method_exists('columns', $this->model) && in_array('created_by', $this->model->columns())) $input['created_by'] = $this->uid();
-            if ($id && method_exists('columns', $this->model) && in_array('updated_by', $this->model->columns())) $input['updated_by'] = $this->uid();
+            if (!$id && in_array('created_by', $this->model->columns())) $input['created_by'] = $this->uid();
+            if ($id && in_array('updated_by', $this->model->columns())) $input['updated_by'] = $this->uid();
 
             if ($id) {
                 $type = 'update';
@@ -82,7 +82,7 @@ abstract class CoreRepository {
     }
 
     public function validateColumns(string $name) {
-        $columns = method_exists($this->model, 'columns') ? $this->model->columns() : [];
+        $columns = $this->model->columns();
         $column = str_replace('!', '', $name);
 
         return in_array($column, $columns) ? $column : null;
@@ -122,7 +122,7 @@ abstract class CoreRepository {
             $available = ['asc', 'desc'];
             foreach($order as $r) {
                 $column = $r['key'];
-                if (method_exists('columns', $this->model) && in_array($column, $this->model->columns())) {
+                if (in_array($column, $this->model->columns())) {
                     $value = isset($r['value']) && in_array($r['value'], $available) ? $r['value'] : 'asc';
                     $data->orderBy($column, $value);
                 }
@@ -133,7 +133,7 @@ abstract class CoreRepository {
             $data = $data->where(function($q) use($searchLike) {
                 $index = 0;
                 foreach($searchLike->columns as $r) {
-                    if (method_exists('columns', $this->model) && in_array($r, $this->model->columns())) {
+                    if (in_array($r, $this->model->columns())) {
                         if ($index === 0) $q->where($r, 'LIKE', "%{$searchLike->value}%");
                         else $q->orWhere($r, 'LIKE', "%{$searchLike->value}%");
                         $index++;
