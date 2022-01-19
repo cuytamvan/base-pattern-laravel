@@ -94,6 +94,7 @@ abstract class CoreRepository {
 
     public function searchable(Builder $data): Builder {
         $payload = $this->payload;
+        $columns = $this->model->columns();
 
         $search = [];
         if (isset($payload['search'])) $search = extract_params($payload['search']);
@@ -104,43 +105,45 @@ abstract class CoreRepository {
         $searchLike = null;
         if (isset($payload['search_like'])) $searchLike = extract_params_like($payload['search_like']);
 
-        if (count($search)) {
-            foreach ($search as $params) {
-                if ($column = $this->validateColumns($params['key'])) {
-                    $value = $params['value'];
-                    $importantCheck = explode('!', $params['key']);
-
-                    if ($value == 'not_null') $data = $data->whereNotNull($column);
-                    else if ($value == 'is_null') $data = $data->whereNull($column);
-                    else if (isset($importantCheck[1])) $data = $data->where($column, $value);
-                    else $data = $data->whereRaw($column.' = ? OR '.$column.' like ?', [$value, '%'.$value.'%']);
-                }
-            }
-        }
-
-        if (count($order)) {
-            $available = ['asc', 'desc'];
-            foreach($order as $r) {
-                $column = $r['key'];
-                if (in_array($column, $this->model->columns())) {
-                    $value = isset($r['value']) && in_array($r['value'], $available) ? $r['value'] : 'asc';
-                    $data->orderBy($column, $value);
-                }
-            }
-        }
-
-        if ($searchLike) {
-            $data = $data->where(function($q) use($searchLike) {
-                $index = 0;
-                foreach($searchLike->columns as $r) {
-                    if (in_array($r, $this->model->columns())) {
-                        if ($index === 0) $q->where($r, 'LIKE', "%{$searchLike->value}%");
-                        else $q->orWhere($r, 'LIKE', "%{$searchLike->value}%");
-                        $index++;
+        $data->where(function(Builder $data) use($columns, $search, $order, $searchLike) {
+            if (count($search)) {
+                foreach ($search as $params) {
+                    if ($column = $this->validateColumns($params['key'])) {
+                        $value = $params['value'];
+                        $importantCheck = explode('!', $params['key']);
+    
+                        if ($value == 'not_null') $data->whereNotNull($column);
+                        else if ($value == 'is_null') $data->whereNull($column);
+                        else if (isset($importantCheck[1])) $data->where($column, $value);
+                        else $data->whereRaw($column.' = ? OR '.$column.' like ?', [$value, '%'.$value.'%']);
                     }
                 }
-            });
-        }
+            }
+    
+            if (count($order)) {
+                $available = ['asc', 'desc'];
+                foreach($order as $r) {
+                    $column = $r['key'];
+                    if (in_array($column, $columns)) {
+                        $value = isset($r['value']) && in_array($r['value'], $available) ? $r['value'] : 'asc';
+                        $data->orderBy($column, $value);
+                    }
+                }
+            }
+    
+            if ($searchLike) {
+                $data->where(function($q) use($columns, $searchLike) {
+                    $index = 0;
+                    foreach($searchLike->columns as $r) {
+                        if (in_array($r, $columns)) {
+                            if ($index === 0) $q->where($r, 'LIKE', "%{$searchLike->value}%");
+                            else $q->orWhere($r, 'LIKE', "%{$searchLike->value}%");
+                            $index++;
+                        }
+                    }
+                });
+            }
+        });
 
         return $data;
     }
