@@ -105,7 +105,7 @@ abstract class CoreRepository {
         $searchLike = null;
         if (isset($payload['search_like'])) $searchLike = extract_params_like($payload['search_like']);
 
-        $data->where(function(Builder $data) use($columns, $search, $order, $searchLike) {
+        $data->where(function(Builder $data) use($columns, $search, $searchLike) {
             if (count($search)) {
                 foreach ($search as $params) {
                     if ($column = $this->validateColumns($params['key'])) {
@@ -116,17 +116,6 @@ abstract class CoreRepository {
                         else if ($value == 'is_null') $data->whereNull($column);
                         else if (isset($importantCheck[1])) $data->where($column, $value);
                         else $data->whereRaw($column.' = ? OR '.$column.' like ?', [$value, '%'.$value.'%']);
-                    }
-                }
-            }
-    
-            if (count($order)) {
-                $available = ['asc', 'desc'];
-                foreach($order as $r) {
-                    $column = $r['key'];
-                    if (in_array($column, $columns)) {
-                        $value = isset($r['value']) && in_array($r['value'], $available) ? $r['value'] : 'asc';
-                        $data->orderBy($column, $value);
                     }
                 }
             }
@@ -144,6 +133,17 @@ abstract class CoreRepository {
                 });
             }
         });
+
+        if (count($order)) {
+            $available = ['asc', 'desc'];
+            foreach($order as $r) {
+                $column = $r['key'];
+                if (in_array($column, $columns)) {
+                    $value = isset($r['value']) && in_array($r['value'], $available) ? $r['value'] : 'asc';
+                    $data->orderBy($column, $value);
+                }
+            }
+        }
 
         return $data;
     }
