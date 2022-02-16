@@ -18,7 +18,7 @@ class CreateAppApiKeysTable extends Migration
             $table->string('name', 100);
             $table->string('secret');
             $table->tinyInteger('status')->default(0);
-            $table->text('hostname')->default('[]');
+            $table->text('hostname')->nullable();
             $table->dateTime('expired_at');
             $table->timestamps();
         });

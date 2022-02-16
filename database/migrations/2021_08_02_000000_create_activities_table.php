@@ -21,7 +21,7 @@ class CreateActivitiesTable extends Migration
             $table->unsignedBigInteger('ref_id')->nullable();
             $table->string('causer_model')->nullable();
             $table->unsignedBigInteger('causer_id')->nullable();
-            $table->text('properties')->default('[]');
+            $table->text('properties')->nullable();
             $table->timestamps();
         });
     }
