@@ -78,7 +78,6 @@ use Exception;
 
 class ModuleNameController extends Controller {
     protected $repository;
-    protected $perm = 'ModuleName';
 
     public function __construct(ModuleNameRepository $repository) {
         $this->repository = $repository;
