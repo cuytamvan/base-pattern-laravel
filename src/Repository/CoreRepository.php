@@ -7,25 +7,30 @@ use Illuminate\Database\Eloquent\Collection;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 
-abstract class CoreRepository {
+abstract class CoreRepository
+{
     protected $guard = null;
     protected $withActivities = true;
     protected $orderBy = null;
     protected $payload = [];
 
-    public function user() {
+    public function user()
+    {
         return auth($this->guard)->user();
     }
 
-    public function uid() {
+    public function uid()
+    {
         return auth($this->guard)->id();
     }
 
-    public function setGuard(string $guard) {
+    public function setGuard(string $guard)
+    {
         $this->guard = $guard;
     }
 
-    public function store($id = null, $input = []) {
+    public function store($id = null, $input = [])
+    {
         try {
             $type = 'create';
             if (!$id && in_array('created_by', $this->model->columns())) $input['created_by'] = $this->uid();
@@ -41,7 +46,7 @@ abstract class CoreRepository {
             if ($this->user() && $this->withActivities) {
                 activity($this->moduleName ?? '')
                     // ->setDescription('lorem ipsum dolor sit amet')
-                    ->setProperties([ 'color' => '#3B82F6', 'type' => $type ])
+                    ->setProperties(['color' => '#3B82F6', 'type' => $type])
                     ->setCauser($this->user())
                     ->addSubject($data)
                     ->save();
@@ -53,23 +58,26 @@ abstract class CoreRepository {
         }
     }
 
-    public function count($where = null) {
+    public function count($where = null)
+    {
         $query = $this->model->query();
         if ($where) $query = $query->where($where);
         return $query->count();
     }
 
-    public function sum($field, $where = null) {
+    public function sum($field, $where = null)
+    {
         $query = $this->model->query();
         if ($where) $query = $query->where($where);
         return $query->sum($field);
     }
 
-    public function all($where = null, $with = []): Collection {
+    public function all($where = null, $with = []): Collection
+    {
         $data = $this->model->query()->with($with);
         if ($where) $data->where($where);
         if ($this->orderBy && is_array($this->orderBy)) {
-            foreach($this->orderBy as $field => $type) {
+            foreach ($this->orderBy as $field => $type) {
                 $data = $data->orderBy($field, $type);
             }
         }
@@ -77,53 +85,73 @@ abstract class CoreRepository {
         return $data->get();
     }
 
-    public function setOrderBy($orderBy) {
+    public function setOrderBy($orderBy)
+    {
         $this->orderBy = $orderBy;
     }
 
-    public function validateColumns(string $name) {
+    public function validateColumns(string $name)
+    {
         $columns = $this->model->columns();
         $column = str_replace('!', '', $name);
 
         return in_array($column, $columns) ? $column : null;
     }
 
-    public function setPayload($payload) {
+    public function setPayload($payload)
+    {
         $this->payload = $payload;
     }
 
-    public function searchable(Builder $data): Builder {
+    public function searchable(Builder $data): Builder
+    {
         $payload = $this->payload;
         $columns = $this->model->columns();
+        $validate = fn($str) => is_numeric($str) || is_date($str);
 
-        $search = [];
-        if (isset($payload['search'])) $search = extract_params($payload['search']);
+        $search = isset($payload['search']) ? extract_params($payload['search']) : [];
+        $order = isset($payload['order']) ? extract_params($payload['order']) : [];
+        $searchLike = isset($payload['search_like']) ? extract_params_like($payload['search_like']) : null;
 
-        $order = [];
-        if (isset($payload['order'])) $order = extract_params($payload['order']);
+        $requestMin = isset($payload['min']) ? extract_params($payload['min']) : [];
+        $requestMax = isset($payload['max']) ? extract_params($payload['max']) : [];
 
-        $searchLike = null;
-        if (isset($payload['search_like'])) $searchLike = extract_params_like($payload['search_like']);
+        $mapMinMax = fn($arr) => [
+            'column' => $arr['column'],
+            'value' => is_date($arr['value']) ? date('Y-m-d', strtotime($arr['value'])) : $arr['value'],
+        ];
 
-        $data->where(function(Builder $data) use($columns, $search, $searchLike) {
+        $min = array_map(function ($r) use ($mapMinMax) {
+            return $mapMinMax($r);
+        }, array_filter($requestMin, function($r) use($validate) {
+            return $validate($r['value']);
+        }));
+
+        $max = array_map(function ($r) use ($mapMinMax) {
+            return $mapMinMax($r);
+        }, array_filter($requestMax, function($r) use($validate) {
+            return $validate($r['value']);
+        }));
+
+        $data->where(function (Builder $data) use ($columns, $search, $min, $max, $searchLike) {
             if (count($search)) {
                 foreach ($search as $params) {
                     if ($column = $this->validateColumns($params['key'])) {
                         $value = $params['value'];
                         $importantCheck = explode('!', $params['key']);
-    
+
                         if ($value == 'not_null') $data->whereNotNull($column);
                         else if ($value == 'is_null') $data->whereNull($column);
                         else if (isset($importantCheck[1])) $data->where($column, $value);
-                        else $data->whereRaw($column.' = ? OR '.$column.' like ?', [$value, '%'.$value.'%']);
+                        else $data->whereRaw($column . ' = ? OR ' . $column . ' like ?', [$value, '%' . $value . '%']);
                     }
                 }
             }
-    
+
             if ($searchLike) {
-                $data->where(function($q) use($columns, $searchLike) {
+                $data->where(function ($q) use ($columns, $searchLike) {
                     $index = 0;
-                    foreach($searchLike->columns as $r) {
+                    foreach ($searchLike->columns as $r) {
                         if (in_array($r, $columns)) {
                             if ($index === 0) $q->where($r, 'LIKE', "%{$searchLike->value}%");
                             else $q->orWhere($r, 'LIKE', "%{$searchLike->value}%");
@@ -132,11 +160,27 @@ abstract class CoreRepository {
                     }
                 });
             }
+
+            if (count($min)) {
+                $data->where(function ($q) use ($columns, $min) {
+                    foreach ($min as $r) {
+                        if (in_array($r['columns'], $columns)) $q->where($r['columns'], '>=', $r['value']);
+                    }
+                });
+            }
+
+            if (count($max)) {
+                $data->where(function ($q) use ($columns, $max) {
+                    foreach ($max as $r) {
+                        if (in_array($r['columns'], $columns)) $q->where($r['columns'], '<=', $r['value']);
+                    }
+                });
+            }
         });
 
         if (count($order)) {
             $available = ['asc', 'desc'];
-            foreach($order as $r) {
+            foreach ($order as $r) {
                 $column = $r['key'];
                 if (in_array($column, $columns)) {
                     $value = isset($r['value']) && in_array($r['value'], $available) ? $r['value'] : 'asc';
@@ -148,15 +192,16 @@ abstract class CoreRepository {
         return $data;
     }
 
-    public function paginate($limit = 10, $where = null, $with = [], $whereHas = null) {
+    public function paginate($limit = 10, $where = null, $with = [], $whereHas = null)
+    {
         $data = $this->model->query()->with($with);
         if ($where) $data = $data->where($where);
         if (isset($whereHas) && is_array($whereHas) && count($whereHas)) {
-            foreach($whereHas as $relateable => $func) $data = $data->whereHas($relateable, $func);
+            foreach ($whereHas as $relateable => $func) $data = $data->whereHas($relateable, $func);
         }
 
         if ($this->orderBy && is_array($this->orderBy)) {
-            foreach($this->orderBy as $field => $type) {
+            foreach ($this->orderBy as $field => $type) {
                 $data = $data->orderBy($field, $type);
             }
         }
@@ -165,24 +210,26 @@ abstract class CoreRepository {
         return $data->paginate($limit);
     }
 
-    public function findById($id, $where = null) {
+    public function findById($id, $where = null)
+    {
         $data = $this->model->query();
         if ($where) $data->where($where);
         return $data->find($id);
     }
 
-    public function delete(...$id) {
+    public function delete(...$id)
+    {
         if ($this->user() && $this->withActivities) {
             $activity = activity($this->moduleName ?? '')
                 // ->setDescription('lorem ipsum dolor sit amet')
-                ->setProperties([ 'color' => '#EF4444', 'type' => 'delete' ])
+                ->setProperties(['color' => '#EF4444', 'type' => 'delete'])
                 ->setCauser($this->user());
         }
 
         if (is_array($id)) {
             $query = $this->model->whereIn('id', $id);
             if ($this->user() && $this->withActivities) {
-                foreach($query->get() as $r) $activity->addSubject($r);
+                foreach ($query->get() as $r) $activity->addSubject($r);
                 $activity->save();
             }
             if (in_array('deleted_by', $this->model->columns())) $query->update(['deleted_by' => $this->uid()]);

@@ -7,15 +7,18 @@ use Illuminate\Console\Command;
 use Cuytamvan\BasePattern\Services\ApiKeyService;
 use Exception;
 
-class GenerateApiKeyCommand extends Command {
+class GenerateApiKeyCommand extends Command
+{
     protected $signature = 'gen:apikey {name}';
     protected $description = 'For generate API Keys';
 
-    public function __construct() {
+    public function __construct()
+    {
         parent::__construct();
     }
 
-    public function handle() {
+    public function handle()
+    {
         try {
             $name = $this->argument('name');
             if (config('cuypattern.api_key')) {

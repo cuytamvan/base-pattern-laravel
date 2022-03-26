@@ -6,10 +6,12 @@ use Cuytamvan\BasePattern\Repository\CoreRepository;
 
 use App\Models\{{name}};
 
-class {{name}}RepositoryEloquent extends CoreRepository implements {{name}}Repository {
+class {{name}}RepositoryEloquent extends CoreRepository implements {{name}}Repository
+{
     protected $model;
 
-    public function __construct({{name}} $model) {
+    public function __construct({{name}} $model)
+    {
         $this->model = $model;
     }
 }

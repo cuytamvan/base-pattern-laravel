@@ -6,17 +6,20 @@ use Illuminate\Console\Command;
 
 use Cuytamvan\BasePattern\Traits\Generator;
 
-class RepositoryGenerator extends Command {
+class RepositoryGenerator extends Command
+{
     protected $signature = 'make:repository {name}';
     protected $description = 'Fucking make repository bitch';
 
     use Generator;
 
-    public function __construct() {
+    public function __construct()
+    {
         parent::__construct();
     }
 
-    protected function repository($name) {
+    protected function repository($name)
+    {
         $template = str_replace(
             ['{{name}}'],
             [$name],
@@ -25,7 +28,8 @@ class RepositoryGenerator extends Command {
         $this->generate("Repositories/", "{$name}Repository.php", $template);
     }
 
-    protected function repositoryEloquent($name) {
+    protected function repositoryEloquent($name)
+    {
         $template = str_replace(
             ['{{name}}'],
             [$name],
@@ -34,7 +38,8 @@ class RepositoryGenerator extends Command {
         $this->generate("Repositories/", "{$name}RepositoryEloquent.php", $template);
     }
 
-    public function handle() {
+    public function handle()
+    {
         $name = $this->argument('name');
 
         $this->repository($name);

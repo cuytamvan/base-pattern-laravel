@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
 use Exception;
 
-class AppApiKey extends Model {
+class AppApiKey extends Model
+{
     protected $fillable = [
         'name',
         'secret',
@@ -15,7 +16,8 @@ class AppApiKey extends Model {
         'expired_at',
     ];
 
-    public static function check($keys): bool {
+    public static function check($keys): bool
+    {
         try {
             $check = self::where('secret', $keys)
                 ->where('status', 1)
@@ -24,7 +26,6 @@ class AppApiKey extends Model {
 
             if ($check) return true;
             else return false;
-
         } catch (Exception $e) {
             throw $e;
         }

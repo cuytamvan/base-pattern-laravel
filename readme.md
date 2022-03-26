@@ -17,7 +17,7 @@ you can install the package via composer
 
 you should copy config
 
-`cp ./vendor/cuytamvan/base-pattern-laravel/config/cuytamvan.php ./config/cuytamvan.php`
+`cp ./vendor/cuytamvan/base-pattern-laravel/config/cuypattern.php ./config/cuypattern.php`
 
 
 change your bootstrap/app.php

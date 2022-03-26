@@ -4,7 +4,8 @@ namespace Cuytamvan\BasePattern\Model;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Activity extends Model {
+class Activity extends Model
+{
     protected $fillable = [
         'log_name',
         'description',
@@ -15,7 +16,8 @@ class Activity extends Model {
         'properties',
     ];
 
-    public function columns() {
+    public function columns()
+    {
         $arr = $this->fillable;
         $arr[] = 'id';
         $arr[] = 'created_at';
@@ -23,11 +25,13 @@ class Activity extends Model {
         return $arr;
     }
 
-    public function causer() {
+    public function causer()
+    {
         return $this->morphTo(__FUNCTION__, 'causer_model');
     }
 
-    public function ref() {
+    public function ref()
+    {
         return $this->morphTo(__FUNCTION__, 'ref_model');
     }
 }

@@ -7,7 +7,8 @@ use Cuytamvan\BasePattern\Model\Activity;
 
 use Exception;
 
-class ActivityService {
+class ActivityService
+{
     protected $model;
 
     protected $logName = null;
@@ -17,22 +18,26 @@ class ActivityService {
     protected $causerId = null;
     protected $subjects = [];
 
-    public function __construct($logName = null) {
+    public function __construct($logName = null)
+    {
         $this->logName = $logName;
         $this->model = new Activity;
     }
 
-    public function setDescription($text = null) {
+    public function setDescription($text = null)
+    {
         $this->description = $text;
         return $this;
     }
 
-    public function setProperties($properties = []) {
+    public function setProperties($properties = [])
+    {
         $this->properties = json_encode($properties);
         return $this;
     }
 
-    public function setCauser($model) {
+    public function setCauser($model)
+    {
         $className = get_class($model);
         $keyName = $model->getKeyName();
 
@@ -41,7 +46,8 @@ class ActivityService {
         return $this;
     }
 
-    public function addSubject($model) {
+    public function addSubject($model)
+    {
         $className = get_class($model);
         $keyName = $model->getKeyName();
 
@@ -52,13 +58,14 @@ class ActivityService {
         return $this;
     }
 
-    public function save(): bool {
+    public function save(): bool
+    {
         try {
             $now = Carbon::now();
             $input = [];
 
             if (count($this->subjects)) {
-                foreach($this->subjects as $r) {
+                foreach ($this->subjects as $r) {
                     $dummy = [
                         'log_name' => $this->logName,
                         'description' => $this->description,

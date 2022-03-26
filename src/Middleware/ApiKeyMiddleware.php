@@ -9,8 +9,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Closure, Exception;
 
-class ApiKeyMiddleware {
-    public function handle(Request $request, Closure $next) {
+class ApiKeyMiddleware
+{
+    public function handle(Request $request, Closure $next)
+    {
         if (config('cuypattern.api_key')) {
             $key = $request->header(config('cuypattern.api_key_name'), '');
             $data = $this->cachingKey($key);
@@ -23,8 +25,9 @@ class ApiKeyMiddleware {
         return $next($request);
     }
 
-    protected function cachingKey($key): Array {
-        $name = 'api-key__'.$key;
+    protected function cachingKey($key): array
+    {
+        $name = 'api-key__' . $key;
         $res = [
             'success' => false,
             'message' => '',
