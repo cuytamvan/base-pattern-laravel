@@ -106,7 +106,7 @@ if (!function_exists('extract_params_like')) {
 }
 
 if (!function_exists('is_date')) {
-    function is_date(mixed $str)
+    function is_date(string $str)
     {
         return (date('Y-m-d', strtotime($str)) === $str);
     }

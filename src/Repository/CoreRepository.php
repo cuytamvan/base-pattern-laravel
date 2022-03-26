@@ -117,7 +117,7 @@ abstract class CoreRepository
         $requestMax = isset($payload['max']) ? extract_params($payload['max']) : [];
 
         $mapMinMax = fn($arr) => [
-            'column' => $arr['column'],
+            'column' => $arr['key'],
             'value' => is_date($arr['value']) ? date('Y-m-d', strtotime($arr['value'])) : $arr['value'],
         ];
 
@@ -164,7 +164,7 @@ abstract class CoreRepository
             if (count($min)) {
                 $data->where(function ($q) use ($columns, $min) {
                     foreach ($min as $r) {
-                        if (in_array($r['columns'], $columns)) $q->where($r['columns'], '>=', $r['value']);
+                        if (in_array($r['column'], $columns)) $q->where($r['column'], '>=', $r['value']);
                     }
                 });
             }
@@ -172,7 +172,7 @@ abstract class CoreRepository
             if (count($max)) {
                 $data->where(function ($q) use ($columns, $max) {
                     foreach ($max as $r) {
-                        if (in_array($r['columns'], $columns)) $q->where($r['columns'], '<=', $r['value']);
+                        if (in_array($r['column'], $columns)) $q->where($r['column'], '<=', $r['value']);
                     }
                 });
             }
