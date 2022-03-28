@@ -8,7 +8,7 @@ lorem ipsum dolor sit amet
 
 ## Instalation 💻
 
-### Installation in Lumen
+### Setup package in Lumen
 
 you can install the package via composer
 
@@ -19,7 +19,6 @@ you should copy config
 
 `cp ./vendor/cuytamvan/base-pattern-laravel/config/cuypattern.php ./config/cuypattern.php`
 
-
 change your bootstrap/app.php
 
 ```php
@@ -27,6 +26,24 @@ $app->configure('cuypattern');
 $app->alias('cache', \Illuminate\Cache\CacheManager::class);  // if you don't have this already
 $app->provider(Cuytamvan\BasePattern\BasePatternServiceProvider::class);
 ```
+
+### Setup package in laravel
+
+add your config/app.php
+
+```php
+[
+    ...
+    'providers' => [
+        ...
+        Cuytamvan\BasePattern\BasePatternServiceProvider::class,
+    ],
+]
+```
+
+publish your fucking provider with command  : `php artisan vendor:publish`
+
+and choose `Provider: Cuytamvan\BasePattern\BasePatternServiceProvider`
 
 run the migration to create table for this package:
 
@@ -84,3 +101,77 @@ class ModuleNameController extends Controller {
     }
 }
 ```
+
+## Searchable
+On controller setup your index
+
+```php
+public function index(Request $request) {
+    $limit = $request->limit ?? 10; // for limit data
+    $params = $request->query();
+    $this->repository->setPayload($params);
+
+    return $this->repository->paginate($limit)->appends($params);
+}
+```
+
+### Min
+filter data with min value of field, available for field date and numeric
+
+example url:
+
+`{{base_url}}/module-name?min=created_at:2022-02-02`
+
+`{{base_url}}/module-name?min=price:20000`
+
+if want to filter more than 1 field:
+
+example url:
+
+`{{base_url}}/module-name?min=created_at:2022-02-02|updated_at:2022-02-02`
+
+`{{base_url}}/module-name?min=price:20000|qty:20000`
+
+### Max
+filter data with max value of field, available for field date and numeric
+
+example url:
+
+`{{base_url}}/module-name?max=created_at:2022-02-02`
+
+`{{base_url}}/module-name?max=price:20000`
+
+if want to filter more than 1 field:
+
+example url:
+
+`{{base_url}}/module-name?max=created_at:2022-02-02|updated_at:2022-02-02`
+
+`{{base_url}}/module-name?max=price:20000|qty:20000`
+
+### Search like
+filter data with search like
+
+example url:
+
+`{{base_url}}/module-name?search_like=name:loremipsumdolor`
+
+`{{base_url}}/module-name?search_like=name,username,email:loremipsumdolor`
+
+### Search perfield
+filter data with search spesific columns
+
+example url:
+
+`{{base_url}}/module-name?search=name:lorem ipsum dolor sit amet|email:test`
+
+### Order
+order by field
+
+example url:
+
+`{{base_url}}/module-name?order=name:asc`
+
+if want to order more than 1 field:
+
+`{{base_url}}/module-name?order=name:asc|email:desc`
