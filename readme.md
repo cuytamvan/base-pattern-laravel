@@ -175,3 +175,7 @@ example url:
 if want to order more than 1 field:
 
 `{{base_url}}/module-name?order=name:asc|email:desc`
+
+### Combine all searchable
+
+`{{base_url}}/module-name?order=name:asc|email:desc&search=name:lorem&min=created_at:2022-02-02`
