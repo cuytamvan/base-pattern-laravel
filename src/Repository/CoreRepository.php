@@ -245,10 +245,15 @@ abstract class CoreRepository
         return $data->paginate($limit);
     }
 
-    public function getData($limit = 10)
+    public function getData($limit = 10, $where = null, $with = [], $whereHas = null)
     {
         $limit = (int) ($this->payload['_limit'] ?? $limit);
-        $query = $this->model->query();
+        $query = $this->model->query()->with($with);
+
+        if ($where) $query->where($where);
+        if (isset($whereHas) && is_array($whereHas) && count($whereHas)) {
+            foreach ($whereHas as $relateable => $func) $query->whereHas($relateable, $func);
+        }
 
         $data = $this->searchable($query);
 
