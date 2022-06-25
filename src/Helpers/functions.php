@@ -37,6 +37,26 @@ if (!function_exists('time_readable')) {
     }
 }
 
+if (!function_exists('extract_param')) {
+    function extract_param($param)
+    {
+        $fix_params = null;
+        $child = explode(':', $param);
+        if (
+            count($child) != 0 &&
+            isset($child[0]) && $child[0] != '' &&
+            isset($child[1]) && $child[1] != '' &&
+            $child[0] != '' && $child[1] != ''
+        ) {
+            $val = $child[1];
+            if (isset($child[2])) $val = $val . ':' . $child[2];
+            if (isset($child[3])) $val = $val . ':' . $child[3];
+            $fix_params = ['key' => $child[0], 'value' => $val];
+        }
+        return $fix_params;
+    }
+}
+
 if (!function_exists('extract_params')) {
     function extract_params($params)
     {
@@ -45,18 +65,8 @@ if (!function_exists('extract_params')) {
         if (count($parent) != 0) {
             foreach ($parent as $value) {
                 if ($value != '') {
-                    $child = explode(':', $value);
-                    if (
-                        count($child) != 0 &&
-                        isset($child[0]) && $child[0] != '' &&
-                        isset($child[1]) && $child[1] != '' &&
-                        $child[0] != '' && $child[1] != ''
-                    ) {
-                        $val = $child[1];
-                        if (isset($child[2])) $val = $val . ':' . $child[2];
-                        if (isset($child[3])) $val = $val . ':' . $child[3];
-                        $fix_params[] = ['key' => $child[0], 'value' => $val];
-                    }
+                    $extract = extract_param($value);
+                    if ($extract) $fix_params[] = $extract;
                 }
             }
         }
@@ -84,24 +94,27 @@ if (!function_exists('extract_params_like')) {
     }
 }
 
-if (!function_exists('extract_params_like')) {
-    function extract_key_relation($key)
+if (!function_exists('extract_key_relation')) {
+    function extract_key_relation($str)
     {
-        $res = null;
-        $ex = explode('.', $key);
-        if (count($ex) > 1 && count($ex) < 3 && strlen($ex[0]) > 0 && strlen($ex[1]) > 0) {
-            $importantCheck = explode('!', $ex[1]);
-            $column = $importantCheck[0];
+        $data = [];
 
-            $operatoCheck = explode('@', $column);
-            $column = $operatoCheck[0];
+        $spliter = explode('|', $str);
+        foreach ($spliter as $val) {
+            $ex = explode('.', $val);
+            if (count($ex) > 1 && count($ex) < 3 && strlen($ex[0]) > 0 && strlen($ex[1]) > 0) {
+                $column = $ex[1];
 
-            $res = [
-                'relation' => $ex[0],
-                'column' => $column,
-            ];
+                $data[] = [
+                    'relation' => $ex[0],
+                    'column' => extract_param($column),
+                ];
+            }
         }
-        return $res;
+
+        $filtered = collect($data)->filter(fn ($r) => $r['column'])->toArray();
+
+        return count($filtered) ? $filtered : null;
     }
 }
 

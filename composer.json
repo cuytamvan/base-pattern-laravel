@@ -1,6 +1,6 @@
 {
     "name": "cuytamvan/base-pattern-laravel",
-    "description": "Laravel pattern repository and fucking generator bitch",
+    "description": "Base pattern laravel, powerfull for API",
     "license": "MIT",
     "type": "library",
     "authors": [

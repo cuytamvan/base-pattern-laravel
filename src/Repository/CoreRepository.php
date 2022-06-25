@@ -45,7 +45,6 @@ abstract class CoreRepository
 
             if ($this->user() && $this->withActivities) {
                 activity($this->moduleName ?? '')
-                    // ->setDescription('lorem ipsum dolor sit amet')
                     ->setProperties(['color' => '#3B82F6', 'type' => $type])
                     ->setCauser($this->user())
                     ->addSubject($data)
@@ -90,46 +89,59 @@ abstract class CoreRepository
         $this->orderBy = $orderBy;
     }
 
-    public function validateColumns(string $name)
+    public function validateColumns(string $name, array $customColumns = null)
     {
-        $columns = $this->model->columns();
+        $columns = $customColumns ?? $this->model->columns();
         $column = str_replace('!', '', $name);
 
         return in_array($column, $columns) ? $column : null;
     }
 
-    public function setPayload($payload)
+    public function setPayload($payload = [])
     {
+        $arr = $payload;
+        $arr['withPagination'] = true;
+
+        if (isset($payload['_limit'])) {
+            $limit = (int) $payload['_limit'];
+            if ($limit < 1) $arr['withPagination'] = false;
+        }
+
         $this->payload = $payload;
+
+        return $arr;
     }
 
     public function searchable(Builder $data): Builder
     {
         $payload = $this->payload;
         $columns = $this->model->columns();
-        $validate = fn($str) => is_numeric($str) || is_date($str);
 
-        $search = isset($payload['search']) ? extract_params($payload['search']) : [];
-        $order = isset($payload['order']) ? extract_params($payload['order']) : [];
-        $searchLike = isset($payload['search_like']) ? extract_params_like($payload['search_like']) : null;
+        $validate = fn ($str) => is_numeric($str) || is_date($str);
 
-        $requestMin = isset($payload['min']) ? extract_params($payload['min']) : [];
-        $requestMax = isset($payload['max']) ? extract_params($payload['max']) : [];
+        $search = isset($payload['_search']) ? extract_params($payload['_search']) : [];
+        $order = isset($payload['_order']) ? extract_params($payload['_order']) : [];
+        $searchLike = isset($payload['_like']) ? extract_params_like($payload['_like']) : null;
 
-        $mapMinMax = fn($arr) => [
+        $requestMin = isset($payload['_min']) ? extract_params($payload['_min']) : [];
+        $requestMax = isset($payload['_max']) ? extract_params($payload['_max']) : [];
+
+        $requestRelation = isset($payload['_search_relation']) ? extract_key_relation($payload['_search_relation']) : [];
+
+        $mapMinMax = fn ($arr) => [
             'column' => $arr['key'],
             'value' => is_date($arr['value']) ? date('Y-m-d', strtotime($arr['value'])) : $arr['value'],
         ];
 
         $min = array_map(function ($r) use ($mapMinMax) {
             return $mapMinMax($r);
-        }, array_filter($requestMin, function($r) use($validate) {
+        }, array_filter($requestMin, function ($r) use ($validate) {
             return $validate($r['value']);
         }));
 
         $max = array_map(function ($r) use ($mapMinMax) {
             return $mapMinMax($r);
-        }, array_filter($requestMax, function($r) use($validate) {
+        }, array_filter($requestMax, function ($r) use ($validate) {
             return $validate($r['value']);
         }));
 
@@ -143,7 +155,7 @@ abstract class CoreRepository
                         if ($value == 'not_null') $data->whereNotNull($column);
                         else if ($value == 'is_null') $data->whereNull($column);
                         else if (isset($importantCheck[1])) $data->where($column, $value);
-                        else $data->whereRaw($column . ' = ? OR ' . $column . ' like ?', [$value, '%' . $value . '%']);
+                        else $data->whereRaw($column . ' like ?', ['%' . $value . '%']);
                     }
                 }
             }
@@ -178,6 +190,29 @@ abstract class CoreRepository
             }
         });
 
+        $relationList = method_exists($this->model, 'relations') ? $this->model->relations() : [];
+
+        foreach ($requestRelation as $r) {
+            $check = $relationList[$r['relation']] ?? null;
+
+            $column = $this->validateColumns($r['column']['key'], $check);
+
+            if ($check && $column) {
+                $data->whereHas($r['relation'], function ($q) use ($column, $r) {
+                    $value = $r['column']['value'];
+                    $importantCheck = explode('!', $r['column']['key']);
+
+                    if ($value == 'not_null') $q->whereNotNull($column);
+                    else if ($value == 'is_null') $q->whereNull($column);
+                    else if (isset($importantCheck[1])) $q->where($column, $value);
+                    else $q->whereRaw(
+                        $column . ' like ?',
+                        ['%' . $value . '%']
+                    );
+                });
+            }
+        }
+
         if (count($order)) {
             $available = ['asc', 'desc'];
             foreach ($order as $r) {
@@ -210,6 +245,18 @@ abstract class CoreRepository
         return $data->paginate($limit);
     }
 
+    public function getData($limit = 10)
+    {
+        $limit = (int) ($this->payload['_limit'] ?? $limit);
+        $query = $this->model->query();
+
+        $data = $this->searchable($query);
+
+        if ($limit < 1) return $data->get();
+
+        return $data->paginate($limit, ['*'], '_page')->appends($this->payload);
+    }
+
     public function findById($id, $where = null)
     {
         $data = $this->model->query();
@@ -221,7 +268,6 @@ abstract class CoreRepository
     {
         if ($this->user() && $this->withActivities) {
             $activity = activity($this->moduleName ?? '')
-                // ->setDescription('lorem ipsum dolor sit amet')
                 ->setProperties(['color' => '#EF4444', 'type' => 'delete'])
                 ->setCauser($this->user());
         }

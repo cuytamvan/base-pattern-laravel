@@ -45,6 +45,8 @@ class RepositoryGenerator extends Command
         $this->repository($name);
         $this->repositoryEloquent($name);
 
+        $this->info('Repository created successfully');
+
         return 0;
     }
 }

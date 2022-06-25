@@ -3,9 +3,6 @@
 <a href="https://packagist.org/packages/cuytamvan/base-pattern-laravel"><img src="https://img.shields.io/packagist/dt/cuytamvan/base-pattern-laravel" alt="Total Downloads"></a>
 <a href="https://packagist.org/packages/cuytamvan/base-pattern-laravel"><img src="https://img.shields.io/packagist/l/cuytamvan/base-pattern-laravel" alt="Lisence"></a>
 
-## About
-lorem ipsum dolor sit amet
-
 ## Instalation 💻
 
 ### Setup package in Lumen
@@ -107,12 +104,48 @@ On controller setup your index
 
 ```php
 public function index(Request $request) {
-    $limit = $request->limit ?? 10; // for limit data
     $params = $request->query();
     $this->repository->setPayload($params);
 
-    return $this->repository->paginate($limit)->appends($params);
+    /**
+     * automaticly detect request _limit, default for request _limit is 10
+     * if _limit >= 1, it will be paginate
+     * if _limit less than 1, it will show all data
+     */
+
+    $data = $this->repository->getData();
+
+    return view('user.index', compact('data'));
 }
+
+/**
+ * if you use $data for api, i suggest to use collection and resource
+ * you can read documentation https://laravel.com/docs/9.x/eloquent-resources
+ */
+
+public function index(Request $request)
+{
+    try {
+        $params = $request->query();
+        $payload = $this->repository->setPayload($params);
+        $data = $this->repository->getData();
+
+        $res = $payload['withPagination'] ?
+            new UserCollection($data) :
+            UserResource::collection($data);
+
+        return response()->json([
+            'message' => 'success',
+            'data' => $res,
+        ]);
+    } catch (Exception $e) {
+        return response()->json([
+            'message' => $e->getMessage(),
+            'data' => null,
+        ], 500);
+    }
+}
+
 ```
 
 ### Min
@@ -120,62 +153,120 @@ filter data with min value of field, available for field date and numeric
 
 example url:
 
-`{{base_url}}/module-name?min=created_at:2022-02-02`
+`{{base_url}}/module-name?_min=created_at:2022-02-02`
 
-`{{base_url}}/module-name?min=price:20000`
+`{{base_url}}/module-name?_min=price:20000`
 
 if want to filter more than 1 field:
 
 example url:
 
-`{{base_url}}/module-name?min=created_at:2022-02-02|updated_at:2022-02-02`
+`{{base_url}}/module-name?_min=created_at:2022-02-02|updated_at:2022-02-02`
 
-`{{base_url}}/module-name?min=price:20000|qty:20000`
+`{{base_url}}/module-name?_min=price:20000|qty:20000`
 
 ### Max
 filter data with max value of field, available for field date and numeric
 
 example url:
 
-`{{base_url}}/module-name?max=created_at:2022-02-02`
+`{{base_url}}/module-name?_max=created_at:2022-02-02`
 
-`{{base_url}}/module-name?max=price:20000`
+`{{base_url}}/module-name?_max=price:20000`
 
 if want to filter more than 1 field:
 
 example url:
 
-`{{base_url}}/module-name?max=created_at:2022-02-02|updated_at:2022-02-02`
+`{{base_url}}/module-name?_max=created_at:2022-02-02|updated_at:2022-02-02`
 
-`{{base_url}}/module-name?max=price:20000|qty:20000`
+`{{base_url}}/module-name?_max=price:20000|qty:20000`
 
 ### Search like
 filter data with search like
 
 example url:
 
-`{{base_url}}/module-name?search_like=name:loremipsumdolor`
+`{{base_url}}/module-name?_search_like=name:loremipsumdolor`
 
-`{{base_url}}/module-name?search_like=name,username,email:loremipsumdolor`
+`{{base_url}}/module-name?_search_like=name,username,email:loremipsumdolor`
 
 ### Search perfield
-filter data with search spesific columns
+filter data with search spesific columns, but you must define function on your model
+```php
+// get from fillable
+public function columns() {
+    $arr = $this->fillable;
 
-example url:
+    // additional columns
+    $arr[] = 'created_at';
+    $arr[] = 'updated_at';
 
-`{{base_url}}/module-name?search=name:lorem ipsum dolor sit amet|email:test`
+    return $arr;
+}
+
+// or manualy
+public function columns() {
+    return [
+        'name',
+        'email',
+        'created_at',
+        'updated_at',
+    ];
+}
+```
+
+example url for search like:
+
+`{{base_url}}/module-name?_search=name:lorem ipsum dolor sit amet|email:test`
+
+example url for search exact:
+
+`{{base_url}}/module-name?_search=name!:lorem ipsum dolor sit amet|email!:test`
+
+### Search by relation
+filter data with search spesific columns on relation, but you must define function on your model
+```php
+public function relations()
+{
+    return [
+        'user' => (new User())->columns(),
+
+        // or
+
+        'user' => [
+            'name',
+            'email',
+        ],
+    ];
+}
+
+// relation
+public function user()
+{
+    return $this->belongsTo(User::class);
+}
+```
+
+example url for search like:
+
+`{{base_url}}/module-name?_search_relation=user.name:cuytamvan`
+
+example url for search exact:
+
+`{{base_url}}/module-name?_search_relation=user.name!:cuytamvan`
 
 ### Order
 order by field
 
 example url:
 
-`{{base_url}}/module-name?order=name:asc`
+`{{base_url}}/module-name?_order=name:asc`
 
 if want to order more than 1 field:
 
-`{{base_url}}/module-name?order=name:asc|email:desc`
+`{{base_url}}/module-name?_order=name:asc|email:desc`
 
 ### Combine all searchable
 
-`{{base_url}}/module-name?order=name:asc|email:desc&search=name:lorem&min=created_at:2022-02-02`
+`{{base_url}}/module-name?_order=name:asc|email:desc&search=name:lorem&min=created_at:2022-02-02`

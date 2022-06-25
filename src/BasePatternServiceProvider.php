@@ -5,7 +5,6 @@ namespace Cuytamvan\BasePattern;
 use Illuminate\Support\ServiceProvider;
 
 use Cuytamvan\BasePattern\Console\Commands\RepositoryGenerator;
-use Cuytamvan\BasePattern\Console\Commands\GenerateApiKeyCommand;
 
 class BasePatternServiceProvider extends ServiceProvider
 {
@@ -19,7 +18,6 @@ class BasePatternServiceProvider extends ServiceProvider
 
         $this->commands([
             RepositoryGenerator::class,
-            GenerateApiKeyCommand::class,
         ]);
     }
 
