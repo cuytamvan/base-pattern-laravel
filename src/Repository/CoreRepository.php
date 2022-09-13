@@ -3,9 +3,9 @@
 namespace Cuytamvan\BasePattern\Repository;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Builder;
 
 use Exception;
-use Illuminate\Database\Eloquent\Builder;
 
 abstract class CoreRepository
 {
@@ -100,14 +100,19 @@ abstract class CoreRepository
     public function setPayload($payload = [])
     {
         $arr = $payload;
+        $newPayload = $payload;
         $arr['withPagination'] = true;
 
-        if (isset($payload['_limit'])) {
-            $limit = (int) $payload['_limit'];
-            if ($limit < 1) $arr['withPagination'] = false;
+        if (isset($payload[config('cuypattern.request_filter.limit')])) {
+            $limit = (int) $payload[config('cuypattern.request_filter.limit')];
+
+            if (!config('cuypattern.enable_show_all') && $limit < 1) {
+                $arr[config('cuypattern.request_filter.limit')] = config('cuypattern.default_limit');
+                $newPayload[config('cuypattern.request_filter.limit')] = config('cuypattern.default_limit');
+            } else if ($limit < 1) $arr['withPagination'] = false;
         }
 
-        $this->payload = $payload;
+        $this->payload = $newPayload;
 
         return $arr;
     }
@@ -119,14 +124,29 @@ abstract class CoreRepository
 
         $validate = fn ($str) => is_numeric($str) || is_date($str);
 
-        $search = isset($payload['_search']) ? extract_params($payload['_search']) : [];
-        $order = isset($payload['_order']) ? extract_params($payload['_order']) : [];
-        $searchLike = isset($payload['_like']) ? extract_params_like($payload['_like']) : null;
+        $search = isset($payload[config('cuypattern.request_filter.search')])
+            ? extract_params($payload[config('cuypattern.request_filter.search')])
+            : [];
 
-        $requestMin = isset($payload['_min']) ? extract_params($payload['_min']) : [];
-        $requestMax = isset($payload['_max']) ? extract_params($payload['_max']) : [];
+        $order = isset($payload[config('cuypattern.request_filter.order')])
+            ? extract_params($payload[config('cuypattern.request_filter.order')])
+            : [];
 
-        $requestRelation = isset($payload['_search_relation']) ? extract_key_relation($payload['_search_relation']) : [];
+        $searchLike = isset($payload[config('cuypattern.request_filter.like')])
+            ? extract_params_like($payload[config('cuypattern.request_filter.like')])
+            : null;
+
+        $requestMin = isset($payload[config('cuypattern.request_filter.min')])
+            ? extract_params($payload[config('cuypattern.request_filter.min')])
+            : [];
+
+        $requestMax = isset($payload[config('cuypattern.request_filter.max')])
+            ? extract_params($payload[config('cuypattern.request_filter.max')])
+            : [];
+
+        $requestRelation = isset($payload[config('cuypattern.request_filter.search_relation')])
+            ? extract_key_relation($payload[config('cuypattern.request_filter.search_relation')])
+            : [];
 
         $mapMinMax = fn ($arr) => [
             'column' => $arr['key'],
@@ -227,27 +247,9 @@ abstract class CoreRepository
         return $data;
     }
 
-    public function paginate($limit = 10, $where = null, $with = [], $whereHas = null)
+    public function getData($where = null, $with = [], $whereHas = null)
     {
-        $data = $this->model->query()->with($with);
-        if ($where) $data = $data->where($where);
-        if (isset($whereHas) && is_array($whereHas) && count($whereHas)) {
-            foreach ($whereHas as $relateable => $func) $data = $data->whereHas($relateable, $func);
-        }
-
-        if ($this->orderBy && is_array($this->orderBy)) {
-            foreach ($this->orderBy as $field => $type) {
-                $data = $data->orderBy($field, $type);
-            }
-        }
-
-        $data = $this->searchable($data);
-        return $data->paginate($limit);
-    }
-
-    public function getData($limit = 10, $where = null, $with = [], $whereHas = null)
-    {
-        $limit = (int) ($this->payload['_limit'] ?? $limit);
+        $limit = (int) ($this->payload[config('cuypattern.request_filter.limit')] ?? config('cuypattern.default_limit'));
         $query = $this->model->query()->with($with);
 
         if ($where) $query->where($where);
@@ -257,9 +259,9 @@ abstract class CoreRepository
 
         $data = $this->searchable($query);
 
-        if ($limit < 1) return $data->get();
+        if (config('cuypattern.enable_show_all') && $limit < 1) return $data->get();
 
-        return $data->paginate($limit, ['*'], '_page')->appends($this->payload);
+        return $data->paginate($limit, ['*'], config('cuypattern.request_filter.page'))->appends($this->payload);
     }
 
     public function findById($id, $where = null)

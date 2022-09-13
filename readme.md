@@ -187,9 +187,9 @@ filter data with search like
 
 example url:
 
-`{{base_url}}/module-name?_search_like=name:loremipsumdolor`
+`{{base_url}}/module-name?_like=name:loremipsumdolor`
 
-`{{base_url}}/module-name?_search_like=name,username,email:loremipsumdolor`
+`{{base_url}}/module-name?_like=name,username,email:loremipsumdolor`
 
 ### Search perfield
 filter data with search spesific columns, but you must define function on your model
