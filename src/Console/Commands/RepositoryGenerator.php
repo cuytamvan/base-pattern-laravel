@@ -28,22 +28,11 @@ class RepositoryGenerator extends Command
         $this->generate("Repositories/", "{$name}Repository.php", $template);
     }
 
-    protected function repositoryEloquent($name)
-    {
-        $template = str_replace(
-            ['{{name}}'],
-            [$name],
-            $this->getStub('RepositoryEloquent')
-        );
-        $this->generate("Repositories/", "{$name}RepositoryEloquent.php", $template);
-    }
-
     public function handle()
     {
         $name = $this->argument('name');
 
         $this->repository($name);
-        $this->repositoryEloquent($name);
 
         $this->info('Repository created successfully');
 

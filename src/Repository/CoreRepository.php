@@ -9,10 +9,18 @@ use Exception;
 
 abstract class CoreRepository
 {
+    protected $model;
+    protected $moduleName;
+
     protected $guard = null;
+
     protected $withActivities = true;
     protected $orderBy = null;
     protected $payload = [];
+    protected $where = null;
+    protected $with = [];
+    protected $withCount = [];
+    protected $whereHas = [];
 
     public function user()
     {
@@ -57,7 +65,7 @@ abstract class CoreRepository
         }
     }
 
-    public function count($where = null)
+    public function count($where = null): int
     {
         $query = $this->model->query();
         if ($where) $query = $query->where($where);
@@ -84,12 +92,12 @@ abstract class CoreRepository
         return $data->get();
     }
 
-    public function setOrderBy($orderBy)
+    public function setOrderBy($orderBy): void
     {
         $this->orderBy = $orderBy;
     }
 
-    public function validateColumns(string $name, array $customColumns = null)
+    public function validateColumns(string $name, array $customColumns = null): ?string
     {
         $columns = $customColumns ?? $this->model->columns();
         $column = str_replace('!', '', $name);
@@ -97,7 +105,7 @@ abstract class CoreRepository
         return in_array($column, $columns) ? $column : null;
     }
 
-    public function setPayload($payload = [])
+    public function setPayload($payload = []): array
     {
         $arr = $payload;
         $newPayload = $payload;
@@ -247,14 +255,52 @@ abstract class CoreRepository
         return $data;
     }
 
-    public function getData($where = null, $with = [], $whereHas = null)
+    public function query(): self
+    {
+        $this->where = null;
+        $this->whereHas = null;
+        $this->with = null;
+
+        return $this;
+    }
+
+    public function where($where): self
+    {
+        $this->where = $where;
+        return $this;
+    }
+
+    public function with(...$with): self
+    {
+        $this->with = $with;
+        return $this;
+    }
+
+    public function withCount(...$withCount): self
+    {
+        $this->withCount = $withCount;
+        return $this;
+    }
+
+    public function whereHas(array $whereHas): self
+    {
+        $this->whereHas = $whereHas;
+        return $this;
+    }
+
+    public function getData()
     {
         $limit = (int) ($this->payload[config('cuypattern.request_filter.limit')] ?? config('cuypattern.default_limit'));
-        $query = $this->model->query()->with($with);
+        $query = $this->model->query();
+        if (!empty($this->with)) $query = $query->with($this->with);
+        if (!empty($this->withCount)) $query = $query->withCount($this->withCount);
 
-        if ($where) $query->where($where);
-        if (isset($whereHas) && is_array($whereHas) && count($whereHas)) {
-            foreach ($whereHas as $relateable => $func) $query->whereHas($relateable, $func);
+        if ($this->where) $query->where($this->where);
+
+        if (!empty($this->whereHas)) {
+            foreach ($this->whereHas as $relateable => $func) {
+                $query->whereHas($relateable, $func);
+            }
         }
 
         $data = $this->searchable($query);

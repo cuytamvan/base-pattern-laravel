@@ -2,7 +2,17 @@
 
 namespace App\Repositories;
 
-interface {{name}}Repository
-{
+use Cuytamvan\BasePattern\Repository\CoreRepository;
 
+use App\Models\{{name}};
+
+class {{name}}RepositoryEloquent extends CoreRepository
+{
+    protected $model;
+    protected $moduleName = '{{name}}';
+
+    public function __construct({{name}} $model)
+    {
+        $this->model = $model;
+    }
 }
