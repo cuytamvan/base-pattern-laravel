@@ -270,13 +270,13 @@ abstract class CoreRepository
         return $this;
     }
 
-    public function with(...$with): self
+    public function with(array $with): self
     {
         $this->with = $with;
         return $this;
     }
 
-    public function withCount(...$withCount): self
+    public function withCount(array $withCount): self
     {
         $this->withCount = $withCount;
         return $this;
