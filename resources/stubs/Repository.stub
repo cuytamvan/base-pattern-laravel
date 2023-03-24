@@ -6,7 +6,7 @@ use Cuytamvan\BasePattern\Repository\CoreRepository;
 
 use App\Models\{{name}};
 
-class {{name}}RepositoryEloquent extends CoreRepository
+class {{name}}Repository extends CoreRepository
 {
     protected $model;
     protected $moduleName = '{{name}}';
